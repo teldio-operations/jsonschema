@@ -3,8 +3,8 @@ package jsonschema_test
 import (
 	"testing"
 
-	"github.com/invopop/jsonschema"
 	"github.com/stretchr/testify/assert"
+	"github.com/teldio-operations/jsonschema"
 )
 
 func TestID(t *testing.T) {

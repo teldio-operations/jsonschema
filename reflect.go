@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/perimeterx/marshmallow"
 )
 
 // customSchemaImpl is used to detect if the type provides it's own
@@ -1064,7 +1066,7 @@ func (r *Reflector) reflectFieldName(f reflect.StructField) (string, bool, bool,
 }
 
 // UnmarshalJSON is used to parse a schema object or boolean.
-func (t *Schema) UnmarshalJSON(data []byte) error {
+func (t *Schema) UnmarshalJSON(data []byte) (err error) {
 	if bytes.Equal(data, []byte("true")) {
 		*t = *TrueSchema
 		return nil
@@ -1078,7 +1080,8 @@ func (t *Schema) UnmarshalJSON(data []byte) error {
 	}{
 		SchemaAlt: (*SchemaAlt)(t),
 	}
-	return json.Unmarshal(data, aux)
+	aux.Extras, err = marshmallow.Unmarshal(data, aux)
+	return
 }
 
 // MarshalJSON is used to serialize a schema object or boolean.

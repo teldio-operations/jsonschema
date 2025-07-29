@@ -1075,11 +1075,7 @@ func (t *Schema) UnmarshalJSON(data []byte) (err error) {
 		return nil
 	}
 	type SchemaAlt Schema
-	aux := &struct {
-		*SchemaAlt
-	}{
-		SchemaAlt: (*SchemaAlt)(t),
-	}
+	aux := (*SchemaAlt)(t)
 	t.Extras, err = marshmallow.Unmarshal(data, aux, marshmallow.WithExcludeKnownFieldsFromMap(true))
 	return
 }

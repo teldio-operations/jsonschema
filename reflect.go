@@ -1080,7 +1080,7 @@ func (t *Schema) UnmarshalJSON(data []byte) (err error) {
 	}{
 		SchemaAlt: (*SchemaAlt)(t),
 	}
-	aux.Extras, err = marshmallow.Unmarshal(data, aux)
+	t.Extras, err = marshmallow.Unmarshal(data, aux, marshmallow.WithExcludeKnownFieldsFromMap(true))
 	return
 }
 

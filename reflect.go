@@ -796,15 +796,15 @@ func (t *Schema) numericalKeywords(tags []string) {
 			name, val := nameValue[0], nameValue[1]
 			switch name {
 			case "multipleOf":
-				t.MultipleOf, _ = toJSONNumber(val)
+				t.MultipleOf = parseFloat(val)
 			case "minimum":
-				t.Minimum, _ = toJSONNumber(val)
+				t.Minimum = parseFloat(val)
 			case "maximum":
-				t.Maximum, _ = toJSONNumber(val)
+				t.Maximum = parseFloat(val)
 			case "exclusiveMaximum":
-				t.ExclusiveMaximum, _ = toJSONNumber(val)
+				t.ExclusiveMaximum = parseFloat(val)
 			case "exclusiveMinimum":
-				t.ExclusiveMinimum, _ = toJSONNumber(val)
+				t.ExclusiveMinimum = parseFloat(val)
 			case "default":
 				if num, ok := toJSONNumber(val); ok {
 					t.Default = num
@@ -995,6 +995,14 @@ func toJSONNumber(s string) (json.Number, bool) {
 		return num, true
 	}
 	return json.Number(""), false
+}
+
+func parseFloat(num string) *float64 {
+	val, err := strconv.ParseFloat(num, 64)
+	if err != nil {
+		return nil
+	}
+	return &val
 }
 
 func parseUint(num string) *uint64 {

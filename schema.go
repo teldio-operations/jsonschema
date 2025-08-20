@@ -1,8 +1,6 @@
 package jsonschema
 
 import (
-	"encoding/json"
-
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
@@ -43,11 +41,11 @@ type Schema struct {
 	Type              string              `json:"type,omitempty"`              // section 6.1.1
 	Enum              []any               `json:"enum,omitempty"`              // section 6.1.2
 	Const             any                 `json:"const,omitempty"`             // section 6.1.3
-	MultipleOf        json.Number         `json:"multipleOf,omitempty"`        // section 6.2.1
-	Maximum           json.Number         `json:"maximum,omitempty"`           // section 6.2.2
-	ExclusiveMaximum  json.Number         `json:"exclusiveMaximum,omitempty"`  // section 6.2.3
-	Minimum           json.Number         `json:"minimum,omitempty"`           // section 6.2.4
-	ExclusiveMinimum  json.Number         `json:"exclusiveMinimum,omitempty"`  // section 6.2.5
+	MultipleOf        *float64            `json:"multipleOf,omitempty"`        // section 6.2.1
+	Maximum           *float64            `json:"maximum,omitempty"`           // section 6.2.2
+	ExclusiveMaximum  *float64            `json:"exclusiveMaximum,omitempty"`  // section 6.2.3
+	Minimum           *float64            `json:"minimum,omitempty"`           // section 6.2.4
+	ExclusiveMinimum  *float64            `json:"exclusiveMinimum,omitempty"`  // section 6.2.5
 	MaxLength         *uint64             `json:"maxLength,omitempty"`         // section 6.3.1
 	MinLength         *uint64             `json:"minLength,omitempty"`         // section 6.3.2
 	Pattern           string              `json:"pattern,omitempty"`           // section 6.3.3

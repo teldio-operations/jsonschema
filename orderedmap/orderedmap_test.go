@@ -153,6 +153,84 @@ func TestANilMapAnswersInsteadOfPanicking(t *testing.T) {
 	}
 }
 
+func TestAllYieldsEveryPairInInsertionOrder(t *testing.T) {
+	om := filled(t, "zebra", "apple", "mango")
+
+	var gotKeys []string
+	var gotValues []int
+
+	for key, value := range om.All() {
+		gotKeys = append(gotKeys, key)
+		gotValues = append(gotValues, value)
+	}
+
+	wantKeys := []string{"zebra", "apple", "mango"}
+	if !reflect.DeepEqual(gotKeys, wantKeys) {
+		t.Errorf("keys = %v, want %v", gotKeys, wantKeys)
+	}
+
+	wantValues := []int{0, 1, 2}
+	if !reflect.DeepEqual(gotValues, wantValues) {
+		t.Errorf("values = %v, want %v", gotValues, wantValues)
+	}
+}
+
+func TestAllStopsOnBreak(t *testing.T) {
+	om := filled(t, "a", "b", "c")
+
+	var got []string
+
+	for key := range om.All() {
+		got = append(got, key)
+		if key == "b" {
+			break
+		}
+	}
+
+	want := []string{"a", "b"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("keys = %v, want %v", got, want)
+	}
+}
+
+func TestAllOnANilMapYieldsNothing(t *testing.T) {
+	var om *OrderedMap[string, int]
+
+	for key := range om.All() {
+		t.Errorf("yielded %q", key)
+	}
+}
+
+// A Go map lets a range body delete the key it is on, and callers filtering a
+// schema's properties expect the same here. Delete relinks the neighbors and
+// leaves the removed pair pointing at the next one, so the loop keeps its
+// place. Clearing those pointers in Delete would strand the loop.
+func TestAllToleratesADeleteOfThePairItIsOn(t *testing.T) {
+	om := filled(t, "a", "b", "c", "d")
+
+	var got []string
+
+	for key := range om.All() {
+		got = append(got, key)
+
+		if key == "b" || key == "c" {
+			om.Delete(key)
+		}
+	}
+
+	want := []string{"a", "b", "c", "d"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("visited %v, want %v", got, want)
+	}
+
+	left := keys(t, om)
+	wantLeft := []string{"a", "d"}
+
+	if !reflect.DeepEqual(left, wantLeft) {
+		t.Errorf("remaining = %v, want %v", left, wantLeft)
+	}
+}
+
 func TestMarshalJSONKeepsInsertionOrder(t *testing.T) {
 	om := filled(t, "zebra", "apple")
 

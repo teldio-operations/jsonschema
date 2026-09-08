@@ -20,6 +20,7 @@ import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"fmt"
+	"iter"
 )
 
 var (
@@ -150,6 +151,19 @@ func (om *OrderedMap[K, V]) Newest() *Pair[K, V] {
 	}
 
 	return om.newest
+}
+
+// All yields every pair from the oldest to the newest. Deleting the pair the
+// loop is on is safe, the way it is with a Go map: Delete relinks the neighbors
+// and leaves the removed pair pointing at the next one.
+func (om *OrderedMap[K, V]) All() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+			if !yield(pair.Key, pair.Value) {
+				return
+			}
+		}
+	}
 }
 
 func (om *OrderedMap[K, V]) MarshalJSON() ([]byte, error) {

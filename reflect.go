@@ -9,14 +9,13 @@ package jsonschema
 import (
 	"bytes"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"net"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/perimeterx/marshmallow"
 )
 
 // customSchemaImpl is used to detect if the type provides it's own
@@ -1104,7 +1103,7 @@ func (r *Reflector) reflectFieldName(f reflect.StructField) (string, bool, bool,
 }
 
 // UnmarshalJSON is used to parse a schema object or boolean.
-func (t *Schema) UnmarshalJSON(data []byte) (err error) {
+func (t *Schema) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, []byte("true")) {
 		*t = *TrueSchema
 		return nil
@@ -1112,10 +1111,26 @@ func (t *Schema) UnmarshalJSON(data []byte) (err error) {
 		*t = *FalseSchema
 		return nil
 	}
+
 	type SchemaAlt Schema
-	aux := (*SchemaAlt)(t)
-	t.Extras, err = marshmallow.Unmarshal(data, aux, marshmallow.WithExcludeKnownFieldsFromMap(true))
-	return
+	aux := struct {
+		*SchemaAlt
+		Extras map[string]any `json:",embed"` //nolint:staticcheck // SA5008 does not know the json/v2 embed tag option yet
+	}{
+		SchemaAlt: (*SchemaAlt)(t),
+	}
+
+	// DefaultOptionsV1 keeps the case-insensitive member matching that
+	// encoding/json does, so a schema spelling MaxLength rather than maxLength
+	// still reaches the field instead of landing in Extras.
+	err := jsonv2.Unmarshal(data, &aux, json.DefaultOptionsV1())
+	if err != nil {
+		return err
+	}
+
+	t.Extras = aux.Extras
+
+	return nil
 }
 
 // MarshalJSON is used to serialize a schema object or boolean.

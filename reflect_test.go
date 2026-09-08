@@ -491,6 +491,46 @@ func TestBaselineUnmarshal(t *testing.T) {
 	compareSchemaOutput(t, "fixtures/test_user.json", r, &TestUser{})
 }
 
+func TestSchemaUnmarshalPutsOnlyUnknownMembersInExtras(t *testing.T) {
+	var s Schema
+
+	err := json.Unmarshal([]byte(`{"type":"string","maxLength":8,"x-widget":"password"}`), &s)
+	require.NoError(t, err)
+
+	assert.Equal(t, "string", s.Type)
+	require.NotNil(t, s.MaxLength)
+	assert.EqualValues(t, 8, *s.MaxLength)
+	assert.Equal(t, map[string]any{"x-widget": "password"}, s.Extras)
+}
+
+// The decode passes json.DefaultOptionsV1 because json/v2 matches member names
+// case-sensitively on its own. Without the option a schema spelling MaxLength
+// rather than maxLength would miss the field and land in Extras instead.
+func TestSchemaUnmarshalMatchesAMemberIgnoringItsCase(t *testing.T) {
+	var s Schema
+
+	err := json.Unmarshal([]byte(`{"Type":"string","MaxLength":8}`), &s)
+	require.NoError(t, err)
+
+	assert.Equal(t, "string", s.Type)
+	require.NotNil(t, s.MaxLength)
+	assert.EqualValues(t, 8, *s.MaxLength)
+	assert.Empty(t, s.Extras)
+}
+
+func TestSchemaExtrasSurviveARoundTrip(t *testing.T) {
+	in := []byte(`{"type":"object","x-widget":"table","x-order":["a","b"]}`)
+
+	var s Schema
+	err := json.Unmarshal(in, &s)
+	require.NoError(t, err)
+
+	out, err := json.Marshal(&s)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, string(in), string(out))
+}
+
 func compareSchemaOutput(t *testing.T, f string, r *Reflector, obj any) {
 	t.Helper()
 	expectedJSON, err := os.ReadFile(f)

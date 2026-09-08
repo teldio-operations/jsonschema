@@ -2,6 +2,7 @@ package orderedmap
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"reflect"
 	"testing"
 )
@@ -231,7 +232,7 @@ func TestAllToleratesADeleteOfThePairItIsOn(t *testing.T) {
 	}
 }
 
-func TestMarshalJSONKeepsInsertionOrder(t *testing.T) {
+func TestMarshalKeepsInsertionOrder(t *testing.T) {
 	om := filled(t, "zebra", "apple")
 
 	got, err := json.Marshal(om)
@@ -245,7 +246,7 @@ func TestMarshalJSONKeepsInsertionOrder(t *testing.T) {
 	}
 }
 
-func TestMarshalJSONOfAZeroMapIsNull(t *testing.T) {
+func TestMarshalOfANilMapIsNull(t *testing.T) {
 	var om *OrderedMap[string, int]
 
 	got, err := json.Marshal(om)
@@ -258,7 +259,7 @@ func TestMarshalJSONOfAZeroMapIsNull(t *testing.T) {
 	}
 }
 
-func TestUnmarshalJSONKeepsDocumentOrder(t *testing.T) {
+func TestUnmarshalKeepsDocumentOrder(t *testing.T) {
 	var om OrderedMap[string, int]
 
 	err := json.Unmarshal([]byte(`{"zebra":1,"apple":2,"mango":3}`), &om)
@@ -279,7 +280,7 @@ func TestUnmarshalJSONKeepsDocumentOrder(t *testing.T) {
 	}
 }
 
-func TestUnmarshalJSONOfNullLeavesTheMapEmpty(t *testing.T) {
+func TestUnmarshalOfNullLeavesTheMapEmpty(t *testing.T) {
 	var om OrderedMap[string, int]
 
 	err := json.Unmarshal([]byte(`null`), &om)
@@ -292,7 +293,7 @@ func TestUnmarshalJSONOfNullLeavesTheMapEmpty(t *testing.T) {
 	}
 }
 
-func TestUnmarshalJSONRejectsANonObject(t *testing.T) {
+func TestUnmarshalRejectsANonObject(t *testing.T) {
 	var om OrderedMap[string, int]
 
 	err := json.Unmarshal([]byte(`["a"]`), &om)
@@ -301,10 +302,11 @@ func TestUnmarshalJSONRejectsANonObject(t *testing.T) {
 	}
 }
 
-// encoding/json lets a duplicate member name through and the last one wins. The
-// replaced package was equally lax, so a schema that decoded before has to keep
-// decoding rather than start erroring.
-func TestUnmarshalJSONTakesTheLastOfADuplicateName(t *testing.T) {
+// UnmarshalJSONFrom reads from the caller's decoder, so the caller's options
+// decide. encoding/json lets a duplicate member name through and the last one
+// wins, and the replaced package was equally lax, so a schema that decoded
+// before has to keep decoding rather than start erroring.
+func TestUnmarshalTakesTheLastOfADuplicateNameUnderV1(t *testing.T) {
 	var om OrderedMap[string, int]
 
 	err := json.Unmarshal([]byte(`{"a":1,"b":2,"a":3}`), &om)
@@ -322,6 +324,46 @@ func TestUnmarshalJSONTakesTheLastOfADuplicateName(t *testing.T) {
 
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("order = %v, want %v", got, want)
+	}
+}
+
+// The reason this type implements MarshalerTo rather than MarshalJSON. Quoting
+// the key with v1 json.Marshal escaped HTML no matter what the caller asked
+// for. Writing it to the caller's encoder lets the caller decide.
+func TestMarshalEscapesAKeyTheWayTheCallerAsked(t *testing.T) {
+	om := New[string, int]()
+	om.Set("a<b>&c", 1)
+
+	v1, err := json.Marshal(om)
+	if err != nil {
+		t.Fatalf("failed to marshal with v1: %s", err)
+	}
+
+	want := `{"a\u003cb\u003e\u0026c":1}`
+	if string(v1) != want {
+		t.Errorf("v1 = %s, want %s", v1, want)
+	}
+
+	v2, err := jsonv2.Marshal(om)
+	if err != nil {
+		t.Fatalf("failed to marshal with v2: %s", err)
+	}
+
+	want = `{"a<b>&c":1}`
+	if string(v2) != want {
+		t.Errorf("v2 = %s, want %s", v2, want)
+	}
+}
+
+// The other half of reading from the caller's decoder. json/v2 rejects a
+// duplicate member name by default, and that strictness has to reach through
+// this type rather than stop at it.
+func TestUnmarshalRejectsADuplicateNameUnderV2(t *testing.T) {
+	var om OrderedMap[string, int]
+
+	err := jsonv2.Unmarshal([]byte(`{"a":1,"a":2}`), &om)
+	if err == nil {
+		t.Fatal("expected an error")
 	}
 }
 

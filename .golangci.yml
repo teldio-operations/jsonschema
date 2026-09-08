@@ -52,6 +52,10 @@ linters:
       # package comment carries what a reader of orderedmap needs.
       - path: orderedmap/
         text: '^exported: '
+      # staticcheck does not count the json/v2 MarshalerTo and UnmarshalerFrom
+      # methods as custom marshaling yet, so it calls OrderedMap unmarshalable.
+      - path: orderedmap/
+        text: '^SA9005:'
     paths:
       - cmd/protopkg/main.go
       - resources

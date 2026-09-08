@@ -15,17 +15,19 @@
 package orderedmap
 
 import (
-	"bytes"
-	"encoding/json"
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"fmt"
 	"iter"
 )
 
+// The v2 methods rather than MarshalJSON and UnmarshalJSON, so the encoder and
+// the decoder carry the caller's options. Quoting a key with v1 json.Marshal
+// would escape HTML even for a caller that asked json/v2 not to. Go 1.27
+// encoding/json calls these, so a v1 caller needs nothing.
 var (
-	_ json.Marshaler   = &OrderedMap[string, any]{}
-	_ json.Unmarshaler = &OrderedMap[string, any]{}
+	_ jsonv2.MarshalerTo     = &OrderedMap[string, any]{}
+	_ jsonv2.UnmarshalerFrom = &OrderedMap[string, any]{}
 )
 
 type Pair[K ~string, V any] struct {
@@ -166,43 +168,33 @@ func (om *OrderedMap[K, V]) All() iter.Seq2[K, V] {
 	}
 }
 
-func (om *OrderedMap[K, V]) MarshalJSON() ([]byte, error) {
+func (om *OrderedMap[K, V]) MarshalJSONTo(enc *jsontext.Encoder) error {
 	if om == nil || om.pairs == nil {
-		return []byte("null"), nil
+		return enc.WriteToken(jsontext.Null)
 	}
 
-	buf := []byte{'{'}
+	err := enc.WriteToken(jsontext.BeginObject)
+	if err != nil {
+		return err
+	}
 
 	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-		if len(buf) > 1 {
-			buf = append(buf, ',')
-		}
-
-		key, err := json.Marshal(string(pair.Key))
+		err = enc.WriteToken(jsontext.String(string(pair.Key)))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		buf = append(buf, key...)
-		buf = append(buf, ':')
-
-		value, err := json.Marshal(pair.Value)
+		// No options, so the value inherits the ones the encoder already holds.
+		err = jsonv2.MarshalEncode(enc, pair.Value)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		buf = append(buf, value...)
 	}
 
-	return append(buf, '}'), nil
+	return enc.WriteToken(jsontext.EndObject)
 }
 
-func (om *OrderedMap[K, V]) UnmarshalJSON(data []byte) error {
-	// The v1 options let a duplicate member name and invalid UTF-8 through, the
-	// way encoding/json does. The replaced package was equally lax, and a schema
-	// that decoded before this change has to keep decoding.
-	dec := jsontext.NewDecoder(bytes.NewReader(data), json.DefaultOptionsV1())
-
+func (om *OrderedMap[K, V]) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	open, err := dec.ReadToken()
 	if err != nil {
 		return err
@@ -228,7 +220,8 @@ func (om *OrderedMap[K, V]) UnmarshalJSON(data []byte) error {
 
 		var value V
 
-		err = jsonv2.UnmarshalDecode(dec, &value, json.DefaultOptionsV1())
+		// No options, so the value inherits the ones the decoder already holds.
+		err = jsonv2.UnmarshalDecode(dec, &value)
 		if err != nil {
 			return err
 		}

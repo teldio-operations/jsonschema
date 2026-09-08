@@ -1,6 +1,6 @@
 module github.com/teldio-operations/jsonschema
 
-go 1.24
+go 1.27.0
 
 require (
 	github.com/pb33f/ordered-map/v2 v2.3.1

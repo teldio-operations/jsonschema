@@ -48,6 +48,10 @@ linters:
         text: at least one file in a package should have a package comment
       - path: (.+)\.go$
         text: bad syntax for struct tag pair
+      # A container's Get, Set, Len and Oldest earn no comment each. The
+      # package comment carries what a reader of orderedmap needs.
+      - path: orderedmap/
+        text: '^exported: '
     paths:
       - cmd/protopkg/main.go
       - resources

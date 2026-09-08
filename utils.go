@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	orderedmap "github.com/pb33f/ordered-map/v2"
+	"github.com/teldio-operations/jsonschema/orderedmap"
 )
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")

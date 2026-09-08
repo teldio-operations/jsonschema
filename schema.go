@@ -1,7 +1,7 @@
 package jsonschema
 
 import (
-	orderedmap "github.com/pb33f/ordered-map/v2"
+	"github.com/teldio-operations/jsonschema/orderedmap"
 )
 
 // Version is the JSON Schema version.

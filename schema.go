@@ -1,7 +1,7 @@
 package jsonschema
 
 import (
-	"github.com/teldio-operations/jsonschema/orderedmap"
+	"github.com/teldio-operations/jsonschema/ordered"
 )
 
 // Version is the JSON Schema version.
@@ -33,10 +33,10 @@ type Schema struct {
 	Items       *Schema   `json:"items,omitempty"`       // section 10.3.1.2  (replaces additionalItems)
 	Contains    *Schema   `json:"contains,omitempty"`    // section 10.3.1.3
 	// RFC draft-bhutton-json-schema-00 section 10.3.2 (sub-schemas)
-	Properties           *orderedmap.OrderedMap[string, *Schema] `json:"properties,omitempty"`           // section 10.3.2.1
-	PatternProperties    map[string]*Schema                      `json:"patternProperties,omitempty"`    // section 10.3.2.2
-	AdditionalProperties *Schema                                 `json:"additionalProperties,omitempty"` // section 10.3.2.3
-	PropertyNames        *Schema                                 `json:"propertyNames,omitempty"`        // section 10.3.2.4
+	Properties           *ordered.Map[string, *Schema] `json:"properties,omitempty"`           // section 10.3.2.1
+	PatternProperties    map[string]*Schema            `json:"patternProperties,omitempty"`    // section 10.3.2.2
+	AdditionalProperties *Schema                       `json:"additionalProperties,omitempty"` // section 10.3.2.3
+	PropertyNames        *Schema                       `json:"propertyNames,omitempty"`        // section 10.3.2.4
 	// RFC draft-bhutton-json-schema-validation-00, section 6
 	Type              string              `json:"type,omitempty"`              // section 6.1.1
 	Enum              []any               `json:"enum,omitempty"`              // section 6.1.2

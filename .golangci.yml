@@ -49,12 +49,12 @@ linters:
       - path: (.+)\.go$
         text: bad syntax for struct tag pair
       # A container's Get, Set, Len and Oldest earn no comment each. The
-      # package comment carries what a reader of orderedmap needs.
-      - path: orderedmap/
+      # package comment carries what a reader of the ordered package needs.
+      - path: ^ordered(map)?/
         text: '^exported: '
       # staticcheck does not count the json/v2 MarshalerTo and UnmarshalerFrom
-      # methods as custom marshaling yet, so it calls OrderedMap unmarshalable.
-      - path: orderedmap/
+      # methods as custom marshaling yet, so it calls the map unmarshalable.
+      - path: ^ordered(map)?/
         text: '^SA9005:'
     paths:
       - cmd/protopkg/main.go

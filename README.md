@@ -14,12 +14,7 @@ This package can be used to generate [JSON Schemas](http://json-schema.org/lates
 - Supports simple string and numeric enums.
 - Supports custom property fields via the `jsonschema_extras` struct tag.
 
-This repository is a fork of the original [jsonschema](https://github.com/alecthomas/jsonschema) by [@alecthomas](https://github.com/alecthomas). At [Invopop](https://invopop.com) we use jsonschema as a cornerstone in our [GOBL library](https://github.com/invopop/gobl), and wanted to be able to continue building and adding features without taking up Alec's time. There have been a few significant changes that probably mean this version is a not compatible with with Alec's:
-
-- The original was stuck on the draft-04 version of JSON Schema, we've now moved to the latest JSON Schema Draft 2020-12.
-- Schema IDs are added automatically from the current Go package's URL in order to be unique, and can be disabled with the `Anonymous` option.
-- Support for the `FullyQualifyTypeName` option has been removed. If you have conflicts, you should use multiple schema files with different IDs, set the `DoNotReference` option to true to hide definitions completely, or add your own naming strategy using the `Namer` property.
-- Support for `yaml` tags and related options has been dropped for the sake of simplification. There were a [few inconsistencies](https://github.com/teldio-operations/jsonschema/pull/21) around this that have now been fixed.
+This repository is a fork of Invopop's [jsonschema](https://github.com/invopop/jsonschema), which is itself a fork of [jsonschema](https://github.com/alecthomas/jsonschema) by [@alecthomas](https://github.com/alecthomas). The main purpose of this fork is to drop all production dependencies: orderedmap and Marshmallow. orderedmap was already flagged as a supply-chain risk in the past, and its functionality can be replicated fairly easily. Marshmallow can be trivially replaced by Go 1.27's json/v2.
 
 ## Versions
 

@@ -4,8 +4,6 @@
 [![Test Go](https://github.com/teldio-operations/jsonschema/actions/workflows/test.yaml/badge.svg)](https://github.com/teldio-operations/jsonschema/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/teldio-operations/jsonschema)](https://goreportcard.com/report/github.com/teldio-operations/jsonschema)
 [![GoDoc](https://godoc.org/github.com/teldio-operations/jsonschema?status.svg)](https://godoc.org/github.com/teldio-operations/jsonschema)
-[![codecov](https://codecov.io/gh/invopop/jsonschema/graph/badge.svg?token=JMEB8W8GNZ)](https://codecov.io/gh/invopop/jsonschema)
-![Latest Tag](https://img.shields.io/github/v/tag/invopop/jsonschema)
 
 This package can be used to generate [JSON Schemas](http://json-schema.org/latest/json-schema-validation.html) from Go types through reflection.
 

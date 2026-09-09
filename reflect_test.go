@@ -75,7 +75,7 @@ type TestUser struct {
 	IgnoredCounter int  `json:"-"`
 
 	// Tests for RFC draft-wright-json-schema-validation-00, section 7.3
-	BirthDate time.Time `json:"birth_date,omitempty"`
+	BirthDate time.Time `json:"birth_date,omitzero"`
 	Website   url.URL   `json:"website,omitempty"`
 	IPAddress net.IP    `json:"network_address,omitempty"`
 
@@ -91,8 +91,9 @@ type TestUser struct {
 	UUID  string `json:"uuid" jsonschema:"format=uuid"`
 
 	// Test for "extras" support
-	Baz       string `jsonschema_extras:"foo=bar,hello=world,foo=bar1"`
-	BoolExtra string `json:"bool_extra,omitempty" jsonschema_extras:"isTrue=true,isFalse=false"`
+	Baz             string `jsonschema_extras:"foo=bar,hello=world,foo=bar1"`
+	BoolExtra       string `json:"bool_extra,omitempty" jsonschema_extras:"isTrue=true,isFalse=false"`
+	ExtraWithCommas string `json:"extra_with_commas,omitempty" jsonschema_extras:"foo=bar\\, and also baz,quux=qux"`
 
 	// Tests for simple enum tags
 	Color      string  `json:"color" jsonschema:"enum=red,enum=green,enum=blue"`
@@ -490,6 +491,46 @@ func TestBaselineUnmarshal(t *testing.T) {
 	compareSchemaOutput(t, "fixtures/test_user.json", r, &TestUser{})
 }
 
+func TestSchemaUnmarshalPutsOnlyUnknownMembersInExtras(t *testing.T) {
+	var s Schema
+
+	err := json.Unmarshal([]byte(`{"type":"string","maxLength":8,"x-widget":"password"}`), &s)
+	require.NoError(t, err)
+
+	assert.Equal(t, "string", s.Type)
+	require.NotNil(t, s.MaxLength)
+	assert.EqualValues(t, 8, *s.MaxLength)
+	assert.Equal(t, map[string]any{"x-widget": "password"}, s.Extras)
+}
+
+// The decode passes json.DefaultOptionsV1 because json/v2 matches member names
+// case-sensitively on its own. Without the option a schema spelling MaxLength
+// rather than maxLength would miss the field and land in Extras instead.
+func TestSchemaUnmarshalMatchesAMemberIgnoringItsCase(t *testing.T) {
+	var s Schema
+
+	err := json.Unmarshal([]byte(`{"Type":"string","MaxLength":8}`), &s)
+	require.NoError(t, err)
+
+	assert.Equal(t, "string", s.Type)
+	require.NotNil(t, s.MaxLength)
+	assert.EqualValues(t, 8, *s.MaxLength)
+	assert.Empty(t, s.Extras)
+}
+
+func TestSchemaExtrasSurviveARoundTrip(t *testing.T) {
+	in := []byte(`{"type":"object","x-widget":"table","x-order":["a","b"]}`)
+
+	var s Schema
+	err := json.Unmarshal(in, &s)
+	require.NoError(t, err)
+
+	out, err := json.Marshal(&s)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, string(in), string(out))
+}
+
 func compareSchemaOutput(t *testing.T, f string, r *Reflector, obj any) {
 	t.Helper()
 	expectedJSON, err := os.ReadFile(f)
@@ -663,4 +704,124 @@ func TestJSONSchemaAlias(t *testing.T) {
 	r := &Reflector{}
 	compareSchemaOutput(t, "fixtures/schema_alias.json", r, &AliasObjectB{})
 	compareSchemaOutput(t, "fixtures/schema_alias_2.json", r, &AliasObjectC{})
+}
+
+// Regression: ReflectFromType previously panicked with a nil pointer
+// dereference when ExpandedStruct=true was combined with a non-struct
+// reflect.Type (slice, map, interface, enum-tagged struct), because only
+// struct types register themselves in the local definitions map.
+func TestReflectFromTypeExpandedStructNonStruct(t *testing.T) {
+	type enumTagged struct {
+		Tags string `jsonschema:"enum=a,enum=b,enum=c"`
+	}
+
+	cases := []struct {
+		name string
+		typ  reflect.Type
+	}{
+		{"slice", reflect.TypeOf([]string{})},
+		{"map", reflect.TypeOf(map[string]any{})},
+		{"interface", reflect.TypeOf((*any)(nil)).Elem()},
+		{"enum_tagged_struct_field", reflect.TypeOf(enumTagged{}.Tags)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &Reflector{ExpandedStruct: true}
+			require.NotPanics(t, func() {
+				s := r.ReflectFromType(tc.typ)
+				require.NotNil(t, s)
+			})
+		})
+	}
+}
+
+func TestJSONStringTag(t *testing.T) {
+	type Ints struct {
+		A int `json:"a,string"`
+		B int `json:"b"`
+	}
+	type Floats struct {
+		A float64 `json:"a,string"`
+		B float32 `json:"b,string"`
+		C float64 `json:"c"`
+	}
+	type Bools struct {
+		A bool `json:"a,string"`
+		B bool `json:"b"`
+	}
+
+	cases := []struct {
+		name     string
+		target   any
+		typeName string
+		property string
+		expected string
+	}{
+		{"int with ,string", &Ints{}, "Ints", "a", "string"},
+		{"int plain", &Ints{}, "Ints", "b", "integer"},
+		{"float64 with ,string", &Floats{}, "Floats", "a", "string"},
+		{"float32 with ,string", &Floats{}, "Floats", "b", "string"},
+		{"float64 plain", &Floats{}, "Floats", "c", "number"},
+		{"bool with ,string", &Bools{}, "Bools", "a", "string"},
+		{"bool plain", &Bools{}, "Bools", "b", "boolean"},
+	}
+
+	r := &Reflector{}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			schema := r.Reflect(c.target)
+			d := schema.Definitions[c.typeName]
+			require.NotNil(t, d)
+			p, found := d.Properties.Get(c.property)
+			require.True(t, found)
+			require.Equal(t, c.expected, p.Type)
+		})
+	}
+}
+
+func TestJSONStringTagUsesStringKeywords(t *testing.T) {
+	type S struct {
+		A int `json:"a,string" jsonschema:"minLength=2,maxLength=4,pattern=^[0-9]+$,default=12,enum=12,enum=34"`
+	}
+
+	r := &Reflector{}
+	schema := r.Reflect(&S{})
+	d := schema.Definitions["S"]
+	require.NotNil(t, d)
+	props := d.Properties
+	require.NotNil(t, props)
+
+	pa, found := props.Get("a")
+	require.True(t, found)
+	require.Equal(t, "string", pa.Type)
+	require.NotNil(t, pa.MinLength)
+	require.NotNil(t, pa.MaxLength)
+	require.EqualValues(t, 2, *pa.MinLength)
+	require.EqualValues(t, 4, *pa.MaxLength)
+	require.Equal(t, "^[0-9]+$", pa.Pattern)
+	require.Equal(t, "12", pa.Default)
+	require.Equal(t, []any{"12", "34"}, pa.Enum)
+	require.Empty(t, pa.Minimum)
+	require.Empty(t, pa.Maximum)
+}
+
+func TestJSONStringTagRequiresExactOptionMatch(t *testing.T) {
+	type S struct {
+		A int `json:"a,stringly" jsonschema:"minLength=2,minimum=3"` //nolint:staticcheck // intentional unknown json option
+	}
+
+	r := &Reflector{}
+	schema := r.Reflect(&S{})
+	d := schema.Definitions["S"]
+	require.NotNil(t, d)
+	props := d.Properties
+	require.NotNil(t, props)
+
+	pa, found := props.Get("a")
+	require.True(t, found)
+	require.Equal(t, "integer", pa.Type)
+	require.Nil(t, pa.MinLength)
+	require.NotNil(t, pa.Minimum)
+	require.EqualValues(t, 3, *pa.Minimum)
 }

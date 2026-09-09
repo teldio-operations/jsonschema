@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/teldio-operations/jsonschema/ordered"
 )
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
@@ -21,6 +21,6 @@ func ToSnakeCase(str string) string {
 
 // NewProperties is a helper method to instantiate a new properties ordered
 // map.
-func NewProperties() *orderedmap.OrderedMap[string, *Schema] {
-	return orderedmap.New[string, *Schema]()
+func NewProperties() *ordered.Map[string, *Schema] {
+	return ordered.New[string, *Schema]()
 }

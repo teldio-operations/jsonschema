@@ -17,14 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: "0" # make sure we get all commits!
 
       - name: Bump version and push tag
         id: bump
-        uses: anothrNick/github-tag-action@1.52.0
+        uses: anothrNick/github-tag-action@1ffbb2e04bd950cffea99066469cb16d69a7887e # 1.52.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BRANCHES: release
           WITH_V: true
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.new_tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ steps.bump.outputs.new_tag }}" --generate-notes

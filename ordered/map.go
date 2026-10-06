@@ -168,8 +168,10 @@ func (m *Map[K, V]) All() iter.Seq2[K, V] {
 	}
 }
 
+// Only a nil map is null. One that holds no pairs, whether decoded from {} or
+// never set, is still an empty object.
 func (m *Map[K, V]) MarshalJSONTo(enc *jsontext.Encoder) error {
-	if m == nil || m.pairs == nil {
+	if m == nil {
 		return enc.WriteToken(jsontext.Null)
 	}
 

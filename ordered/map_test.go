@@ -259,6 +259,27 @@ func TestMarshalOfANilMapIsNull(t *testing.T) {
 	}
 }
 
+// A schema with no fields still has "properties": {}, and turning that into
+// null makes the schema invalid for the web UI's form, which then blocks the
+// action from being sent.
+func TestAnEmptyObjectRoundTripsAsAnEmptyObject(t *testing.T) {
+	var m Map[string, int]
+
+	err := json.Unmarshal([]byte(`{}`), &m)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %s", err)
+	}
+
+	got, err := json.Marshal(&m)
+	if err != nil {
+		t.Fatalf("failed to marshal: %s", err)
+	}
+
+	if string(got) != "{}" {
+		t.Errorf("round trip = %s, want {}", got)
+	}
+}
+
 func TestUnmarshalKeepsDocumentOrder(t *testing.T) {
 	var m Map[string, int]
 
